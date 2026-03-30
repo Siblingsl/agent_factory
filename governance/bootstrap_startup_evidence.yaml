@@ -12,7 +12,7 @@ evidence:
   violation_fix_pr_url: ''
   notes: 'branch_protection: branch protection policy satisfied'
   stats:
-    pr_ci_gate_runs: 6
+    pr_ci_gate_runs: 7
     failed_runs: 5
-    success_runs: 1
-updated_at: '2026-03-30T07:22:13Z'
+    success_runs: 2
+updated_at: '2026-03-30T07:29:21Z'

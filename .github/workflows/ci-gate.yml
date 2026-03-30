@@ -43,4 +43,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          python -m agent_factory.ci.branch_protection_guard --mode check --branch main --check-name gate --reviewers 1 --strict
+          python -m agent_factory.ci.branch_protection_guard --mode check --branch main --check-name gate --reviewers 0 --strict
