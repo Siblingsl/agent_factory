@@ -1,0 +1,5 @@
+repo_mode: local
+bootstrap_stage: ci_gate_bootstrap_completed
+notes: >
+  Local workspace mode does not have remote branch protection settings.
+  Branch-protection checks are treated as N/A in local mode and must be re-validated in remote mode.

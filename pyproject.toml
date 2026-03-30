@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-factory"
+version = "0.1.0"
+description = "Formal Agent Factory workflow scaffold based on LangGraph architecture."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn>=0.32.0",
+  "pydantic>=2.9.0",
+  "PyYAML>=6.0.2",
+]
+
+[project.optional-dependencies]
+graph = [
+  "langgraph>=0.2.50",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agent_factory*"]

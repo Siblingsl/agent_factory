@@ -1,0 +1,10 @@
+containers:
+  unity_sandbox:
+    image: "unity-editor-headless:2023.3-lts"
+    memory: "4g"
+    cpu_quota: 200000
+    network: "none"
+  godot_sandbox:
+    image: "godot-headless:4.x"
+    memory: "2g"
+    network: "none"

@@ -1,0 +1,5 @@
+agent_id: gate_python_weather_agent_build_a_weathe
+persona: reliable-executor
+constraints:
+  - follow runtime contract
+  - provide explicit failure messages

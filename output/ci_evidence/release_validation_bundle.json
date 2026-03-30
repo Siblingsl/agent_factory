@@ -1,0 +1,36 @@
+{
+  "generated_at": "2026-03-30T05:58:01.387106+00:00",
+  "release_signals": {
+    "dependency_install": true,
+    "smoke_test": true,
+    "contract_tests": true,
+    "domain_tests": true,
+    "sandbox_verification": true,
+    "evidence_bundle_complete": true
+  },
+  "samples": [
+    {
+      "language": "python",
+      "output_dir": "output\\gate_python_weather_agent_build_a_weathe",
+      "dependency_install": true,
+      "contract_tests": true,
+      "domain_tests": true,
+      "sandbox_verification": true,
+      "smoke_test": true,
+      "smoke_message": "{'agent': 'gate_python_weather_agent_build_a_weathe', 'purpose': 'named gate_python_weather_agent build a weather assistant with web search', 'tools': ['web_search', 'code_exec'], 'input': {'hello': 'world'}, 'status': 'ok'}",
+      "evidence_bundle_complete": true
+    },
+    {
+      "language": "nodejs",
+      "output_dir": "output\\gate_node_weather_agent_build_a_weather",
+      "dependency_install": true,
+      "contract_tests": true,
+      "domain_tests": true,
+      "sandbox_verification": true,
+      "smoke_test": true,
+      "smoke_message": "{\n  agent: 'gate_node_weather_agent_build_a_weather',\n  purpose: 'named gate_node_weather_agent build a weather assistant with web search',\n  tools: [ 'web_search', 'code_exec' ],\n  input: { hello: 'world' },\n  status: 'ok'\n}",
+      "evidence_bundle_complete": true
+    }
+  ],
+  "errors": []
+}

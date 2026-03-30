@@ -1,0 +1,12 @@
+{
+  "dependency_install": {
+    "success": true,
+    "error": null,
+    "logs": "pydantic==2.9.2\npython-dotenv==1.0.1\nhttpx==0.27.2"
+  },
+  "contract": {
+    "passed": true,
+    "issues": []
+  },
+  "degraded": false
+}

@@ -1,0 +1,12 @@
+{
+  "dependency_install": {
+    "success": true,
+    "error": null,
+    "logs": "{\n  \"@anthropic-ai/sdk\": \"^0.37.0\",\n  \"dotenv\": \"^16.4.7\",\n  \"undici\": \"^6.20.0\"\n}"
+  },
+  "contract": {
+    "passed": true,
+    "issues": []
+  },
+  "degraded": false
+}

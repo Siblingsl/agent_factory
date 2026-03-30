@@ -1,0 +1,6 @@
+name: gate_node_weather_agent_build_a_weather
+language: nodejs
+architecture: fast-track-single-pass
+tools:
+  - web_search
+  - code_exec

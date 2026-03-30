@@ -1,0 +1,18 @@
+mappings:
+  - doc: README.md
+    requires:
+      - agent_factory/core/factory_graph.py
+      - agent_factory/core/nodes.py
+      - agent_factory/api/main.py
+  - doc: docs/FEATURE_PROGRESS.md
+    requires:
+      - selftests/main_flow_bootstrap.selftest.yaml
+      - selftests/ci_bootstrap.selftest.yaml
+  - doc: agent_factory_merged.md
+    requires:
+      - agent_factory/ci/run_gates.py
+      - .github/workflows/ci-gate.yml
+      - .github/pull_request_template.md
+      - agent_factory/core/factory_graph.py
+      - agent_factory/recovery/strategy_engine.py
+      - agent_factory/delivery/packager.py

@@ -1,0 +1,9 @@
+feature_id: F-BOOTSTRAP-CI
+feature_title: "CI Gate Bootstrap"
+progress: 100
+self_test:
+  command: "python -m agent_factory.ci.run_gates --strict"
+  executed_at: "2026-03-30 15:10:00"
+  result: "pass"
+  report_path: "output/ci_evidence/release_validation_bundle.json"
+  notes: "Bootstrap gate checks are fully enforced in strict mode."
