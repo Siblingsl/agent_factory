@@ -1,0 +1,9 @@
+feature_id: F-MAIN-FLOW-LAUNCH-E2E
+feature_title: "Launch Checkpoint API + Real E2E Test"
+progress: 75
+self_test:
+  command: "python -m unittest -v tests.test_api_launch_flow tests.test_tool_planning tests.test_main_flow_tool_plan_integration"
+  executed_at: "2026-03-30 16:28:43"
+  result: "pass"
+  report_path: "output/ci_evidence/main_flow_launch_e2e_unittest.log"
+  notes: "Validated real start->checkpoint->resume->delivery flow via FastAPI endpoints for both Python and Node.js."

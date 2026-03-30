@@ -11,3 +11,7 @@
 ### Tool Planning Integration [完成度: 60%]
 - feature_id: F-MAIN-FLOW-TOOL-PLAN
 - 说明: ToolSelector 回退链正式接入主流程，生成工具计划并写入交付元数据
+
+### Launch Checkpoint API + Real E2E Test [完成度: 75%]
+- feature_id: F-MAIN-FLOW-LAUNCH-E2E
+- 说明: 新增 /start /status /result /resume 连贯启动链路，并以 Python/Node 端到端真实流程测试验证可启动到交付

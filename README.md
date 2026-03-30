@@ -35,6 +35,24 @@ pip install -e .
 uvicorn agent_factory.api.main:app --reload
 ```
 
+## Launch Flow API (Checkpoint + Resume)
+
+```bash
+# 1) Start session until tech-spec checkpoint
+curl -s -X POST http://127.0.0.1:8000/start \
+  -H "Content-Type: application/json" \
+  -d "{\"input\":\"named demo_agent build weather assistant with web search\",\"language\":\"python\"}"
+
+# 2) Read checkpoint status/result
+curl -s http://127.0.0.1:8000/status/<session_id>
+curl -s http://127.0.0.1:8000/result/<session_id>
+
+# 3) Approve and resume to full delivery
+curl -s -X POST http://127.0.0.1:8000/resume/<session_id> \
+  -H "Content-Type: application/json" \
+  -d "{\"approved\": true}"
+```
+
 ## CI Gate
 
 Run the bootstrap gate checks:
