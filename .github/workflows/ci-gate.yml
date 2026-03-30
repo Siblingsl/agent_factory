@@ -25,4 +25,4 @@ jobs:
 
       - name: Run Gate
         run: |
-          python agent_factory_mvp/ci/run_gates.py --strict
+          python -m agent_factory.ci.run_gates --strict

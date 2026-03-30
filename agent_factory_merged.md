@@ -1,4 +1,4 @@
-# Agent Factory — 智能体工厂完整技术方案
+﻿# Agent Factory — 智能体工厂完整技术方案
 
 > 技术框架：LangGraph 0.2+ | 角色来源：agency-agents（147角色 · 12部门）| 讨论范式：MiroFish启发 | LLM：Claude claude-opus-4-5
 manus
@@ -243,7 +243,7 @@ self_test:
 
 以下文件缺一不可：
 
-1. `agent_factory_mvp/ci/run_gates.py`
+1. `agent_factory/ci/run_gates.py`
 2. `.github/workflows/ci-gate.yml`
 3. `.github/pull_request_template.md`
 
@@ -269,7 +269,7 @@ self_test:
 并强制执行：
 
 1. 安装项目依赖；
-2. 运行 `python agent_factory_mvp/ci/run_gates.py --strict`；
+2. 运行 `python agent_factory/ci/run_gates.py --strict`；
 3. 将任务状态回传为必需检查项（Required Status Check）。
 
 #### 0.10.5 分支保护要求（必须）
@@ -4558,7 +4558,7 @@ Agent Factory 强调高质量和高可靠性，通过严格的工程化实践和
 技术方案的 `0.10 项目创建后的首步限制操作（CI Gate Bootstrap，强制）` [1] 详细定义了 CI Gate 的最小检查项和强制规则。`run_gates.py` 是这些检查的核心执行脚本。
 
 ```python
-# agent_factory_mvp/ci/run_gates.py
+# agent_factory/ci/run_gates.py
 
 import argparse
 import os
@@ -6096,3 +6096,4 @@ curl -s -X POST http://localhost:8000/start \
 ---
 
 *文档版本：Merged v1 | 合并时间：2026-03-30 | 基础文档：Final Clean v2（2026-03-27）| 新增：§17 核心模块代码实现建议（来源：Manus AI，2026-03-30）| 角色数据以 git clone agency-agents 实际内容为准*
+

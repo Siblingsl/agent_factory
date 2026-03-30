@@ -69,7 +69,6 @@ def scan_for_placeholders(repo_path: Path) -> GateCheckResult:
 
 def check_required_bootstrap_files(repo_path: Path) -> GateCheckResult:
     required = [
-        "agent_factory_mvp/ci/run_gates.py",
         ".github/workflows/ci-gate.yml",
         ".github/pull_request_template.md",
         "agent_factory/ci/run_gates.py",
