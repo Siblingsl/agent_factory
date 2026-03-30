@@ -1,0 +1,8 @@
+repo: Siblingsl/agent_factory
+branch: main
+main_branch_no_direct_push: true
+required_ci_gate_enabled: true
+required_reviewer_enabled: true
+admin_bypass_disabled: true
+updated_at: "2026-03-30T06:10:00Z"
+notes: "Applied and verified by branch_protection_guard (apply + check) on 2026-03-30."

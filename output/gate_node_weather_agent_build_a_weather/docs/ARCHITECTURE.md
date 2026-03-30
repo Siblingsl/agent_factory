@@ -13,7 +13,7 @@ Execution Model: layered workflow
 - Generate packaging metadata :: backend-architect, ai-engineer
 
 ## Assigned Roles
-- ai-engineer
 - senior-developer
+- ai-engineer
 - mcp-builder
 - backend-architect

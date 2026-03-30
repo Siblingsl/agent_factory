@@ -72,7 +72,6 @@ Execution Model: layered workflow
 {chr(10).join(f"- {r}" for r in role_slugs)}
 """
 
-
 def _api_doc(spec: AgentSpec, entry_file: str) -> str:
     return f"""# API
 
