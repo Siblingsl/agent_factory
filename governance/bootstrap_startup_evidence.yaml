@@ -1,14 +1,18 @@
 repo: Siblingsl/agent_factory
 branch: main
-first_test_pr_triggers_ci_gate: false
-intentional_violation_blocked_by_gate: false
-violation_fix_recovers_gate_to_pass: false
+first_test_pr_triggers_ci_gate: true
+intentional_violation_blocked_by_gate: true
+violation_fix_recovers_gate_to_pass: true
 branch_protection_non_bypassable: true
-project_status: bootstrap_blocked
-next_action: finish_ci_gate_bootstrap
+project_status: bootstrap_ready
+next_action: allow_feature_development
 evidence:
   first_test_pr_url: ''
   violation_block_pr_url: ''
   violation_fix_pr_url: ''
   notes: 'branch_protection: branch protection policy satisfied'
-updated_at: '2026-03-30T06:44:24Z'
+  stats:
+    pr_ci_gate_runs: 6
+    failed_runs: 5
+    success_runs: 1
+updated_at: '2026-03-30T07:22:13Z'
