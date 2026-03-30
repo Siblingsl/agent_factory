@@ -55,6 +55,28 @@ async def package_delivery(state: FactoryStateV3, degraded: bool) -> DeliveryPac
     (docs_dir / "README.md").write_text(readme_text, encoding="utf-8")
     (docs_dir / "TUTORIAL.md").write_text(generate_tutorial(spec), encoding="utf-8")
 
+    factory_metadata = {
+        "factory_version": "0.1.0",
+        "production_timestamp": datetime.now(timezone.utc).isoformat(),
+        "execution_mode": state.get("execution_mode").value
+        if hasattr(state.get("execution_mode"), "value")
+        else str(state.get("execution_mode")),
+        "target_language": language.value,
+        "discussion_team": state.get("dispatch_plan_phase1").roles
+        if state.get("dispatch_plan_phase1")
+        else [],
+        "discussion_rounds": state.get("dispatch_plan_phase1").discussion_rounds
+        if state.get("dispatch_plan_phase1")
+        else 0,
+        "token_usage": state.get("token_usage", {}),
+        "quality_gate_attempts": state.get("retry_count", 0) + 1,
+        "tool_plans": state.get("tool_plans", []),
+        "degraded": degraded,
+    }
+    (output_dir / "factory_metadata.json").write_text(
+        json.dumps(factory_metadata, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
     dep_result = await packager.verify_dependencies_in_sandbox(output_dir)
     validator = AgentContractValidator()
     contract_report = await validator.validate(str(output_dir))
@@ -76,28 +98,6 @@ async def package_delivery(state: FactoryStateV3, degraded: bool) -> DeliveryPac
 
     (output_dir / "validation_report.json").write_text(
         json.dumps(validation_report, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
-
-    factory_metadata = {
-        "factory_version": "0.1.0",
-        "production_timestamp": datetime.now(timezone.utc).isoformat(),
-        "execution_mode": state.get("execution_mode").value
-        if hasattr(state.get("execution_mode"), "value")
-        else str(state.get("execution_mode")),
-        "target_language": language.value,
-        "discussion_team": state.get("dispatch_plan_phase1").roles
-        if state.get("dispatch_plan_phase1")
-        else [],
-        "discussion_rounds": state.get("dispatch_plan_phase1").discussion_rounds
-        if state.get("dispatch_plan_phase1")
-        else 0,
-        "token_usage": state.get("token_usage", {}),
-        "quality_gate_attempts": state.get("retry_count", 0) + 1,
-        "tool_plans": state.get("tool_plans", []),
-        "degraded": degraded,
-    }
-    (output_dir / "factory_metadata.json").write_text(
-        json.dumps(factory_metadata, indent=2, ensure_ascii=False), encoding="utf-8"
     )
 
     artifact_paths = sorted(

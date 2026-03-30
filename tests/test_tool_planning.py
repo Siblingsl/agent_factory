@@ -26,8 +26,12 @@ class ToolPlanningTests(unittest.IsolatedAsyncioTestCase):
 
         web_chain = by_task["web_search"]
         self.assertTrue(web_chain.primary_tool_id)
+        self.assertTrue(web_chain.primary_tool_id.startswith("web_search_"))
         self.assertGreaterEqual(len(web_chain.composition_tool_ids), 1)
         self.assertIsInstance(web_chain.fallback_tool_ids, list)
+
+        code_chain = by_task["code_exec"]
+        self.assertTrue(code_chain.primary_tool_id.startswith("code_exec_"))
 
     async def test_ignores_none_tool(self) -> None:
         spec = AgentSpec(

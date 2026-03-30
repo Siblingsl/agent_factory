@@ -26,6 +26,7 @@ class ApiLaunchFlowTests(unittest.TestCase):
         delivery = final_state.get("delivery_package", {})
         self.assertTrue(delivery.get("validation_passed"))
         self.assertEqual(delivery.get("target_language"), "python")
+        self._assert_no_metadata_missing_warning(delivery)
         report = Path(delivery.get("output_dir", "")) / "validation_report.json"
         self.assertTrue(report.exists(), "validation report should exist after real flow run")
 
@@ -39,6 +40,7 @@ class ApiLaunchFlowTests(unittest.TestCase):
         self.assertTrue(delivery.get("validation_passed"))
         self.assertEqual(delivery.get("target_language"), "nodejs")
         self.assertEqual(delivery.get("entry_file"), "agent.ts")
+        self._assert_no_metadata_missing_warning(delivery)
 
     def test_start_rejects_invalid_language(self) -> None:
         response = self.client.post(
@@ -87,6 +89,16 @@ class ApiLaunchFlowTests(unittest.TestCase):
         self.assertFalse(final_status.json()["interrupted"])
 
         return final_state
+
+    def _assert_no_metadata_missing_warning(self, delivery: dict) -> None:
+        contract = delivery.get("validation_report", {}).get("contract", {})
+        issues = contract.get("issues", [])
+        has_warning = any(
+            "factory_metadata.json not found" in str(item.get("message", ""))
+            for item in issues
+            if isinstance(item, dict)
+        )
+        self.assertFalse(has_warning, "factory_metadata warning should be resolved")
 
 
 if __name__ == "__main__":

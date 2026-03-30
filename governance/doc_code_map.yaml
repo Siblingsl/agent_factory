@@ -10,6 +10,7 @@ mappings:
       - selftests/ci_bootstrap.selftest.yaml
       - selftests/main_flow_tool_plan.selftest.yaml
       - selftests/main_flow_launch_e2e.selftest.yaml
+      - selftests/main_flow_real_test_stabilization.selftest.yaml
   - doc: agent_factory_merged.md
     requires:
       - agent_factory/ci/run_gates.py

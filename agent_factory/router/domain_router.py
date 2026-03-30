@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from agent_factory.core.state import AgentSpec
 from agent_factory.registry.models import Division
 
@@ -8,6 +10,7 @@ class DomainRouter:
     DOMAIN_SIGNALS: dict[str, list[Division]] = {
         "game": [Division.GAME_DEVELOPMENT, Division.SPECIALIZED],
         "xr": [Division.SPATIAL_COMPUTING, Division.ENGINEERING],
+        "weather": [Division.ENGINEERING, Division.SPECIALIZED, Division.TESTING],
         "web3": [Division.ENGINEERING, Division.SPECIALIZED],
         "enterprise": [Division.SUPPORT, Division.SPECIALIZED, Division.ENGINEERING],
         "mobile": [Division.ENGINEERING, Division.DESIGN],
@@ -23,21 +26,37 @@ class DomainRouter:
         Division.TESTING,
     }
 
+    def _contains_any(self, text: str, keywords: list[str]) -> bool:
+        for term in keywords:
+            normalized = term.strip().lower()
+            if not normalized:
+                continue
+            if any("\u4e00" <= ch <= "\u9fff" for ch in normalized):
+                if normalized in text:
+                    return True
+                continue
+            pattern = rf"(?<![a-z0-9_]){re.escape(normalized)}(?![a-z0-9_])"
+            if re.search(pattern, text):
+                return True
+        return False
+
     def detect_domain(self, spec: AgentSpec) -> str:
         text = " ".join(spec.purpose + spec.tools).lower()
-        if any(k in text for k in ["game", "unity", "unreal", "godot", "游戏"]):
+        if self._contains_any(text, ["game", "unity", "unreal", "godot", "游戏"]):
             return "game"
-        if any(k in text for k in ["xr", "ar", "vr", "spatial"]):
+        if self._contains_any(text, ["weather", "forecast", "meteorology", "天气", "气象"]):
+            return "weather"
+        if self._contains_any(text, ["xr", "ar", "vr", "spatial"]):
             return "xr"
-        if any(k in text for k in ["web3", "blockchain", "solidity", "区块链"]):
+        if self._contains_any(text, ["web3", "blockchain", "solidity", "区块链"]):
             return "web3"
-        if any(k in text for k in ["enterprise", "crm", "erp", "工单", "企业"]):
+        if self._contains_any(text, ["enterprise", "crm", "erp", "工单", "企业"]):
             return "enterprise"
-        if any(k in text for k in ["mobile", "android", "ios"]):
+        if self._contains_any(text, ["mobile", "android", "ios"]):
             return "mobile"
-        if any(k in text for k in ["data", "analysis", "etl", "数据"]):
+        if self._contains_any(text, ["data", "analysis", "etl", "数据"]):
             return "data"
-        if any(k in text for k in ["marketing", "growth", "campaign", "营销"]):
+        if self._contains_any(text, ["marketing", "growth", "campaign", "营销"]):
             return "marketing"
         return "general"
 

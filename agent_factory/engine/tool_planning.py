@@ -115,6 +115,16 @@ def _tool_task_description(tool_key: str, spec: AgentSpec) -> str:
     return mapping.get(tool_key, base)
 
 
+def _preferred_category(tool_key: str) -> ToolCategory | None:
+    mapping: dict[str, ToolCategory] = {
+        "web_search": ToolCategory.WEB_ACCESS,
+        "code_exec": ToolCategory.CODE_EXEC,
+        "file_ops": ToolCategory.FILE_OPS,
+        "mcp": ToolCategory.API_CALL,
+    }
+    return mapping.get(tool_key)
+
+
 async def build_tool_chains_for_spec(spec: AgentSpec) -> list[PlannedToolChain]:
     requested = _normalize_requested_tools(spec.tools)
     if not requested:
@@ -132,6 +142,7 @@ async def build_tool_chains_for_spec(spec: AgentSpec) -> list[PlannedToolChain]:
             task=task,
             context=context,
             strategy=SelectionStrategy.BALANCED,
+            preferred_category=_preferred_category(tool_key),
         )
         plans.append(
             PlannedToolChain(

@@ -15,3 +15,7 @@
 ### Launch Checkpoint API + Real E2E Test [完成度: 75%]
 - feature_id: F-MAIN-FLOW-LAUNCH-E2E
 - 说明: 新增 /start /status /result /resume 连贯启动链路，并以 Python/Node 端到端真实流程测试验证可启动到交付
+
+### Real Test Stabilization Pack [完成度: 82%]
+- feature_id: F-MAIN-FLOW-REAL-TEST-STAB
+- 说明: 修复天气需求领域误判、工具主选类别漂移、交付校验元数据误告警，提升正式实测稳定性

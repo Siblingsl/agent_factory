@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from agent_factory.engine.tool_capability_index import ScoredTool, ToolCapabilityIndex
-from agent_factory.engine.tool_descriptor import ToolCapabilityDescriptor
+from agent_factory.engine.tool_descriptor import ToolCapabilityDescriptor, ToolCategory
 
 
 class SelectionStrategy(str, Enum):
@@ -47,8 +47,15 @@ class ToolSelector:
         task: SubTask,
         context: AgentContext,
         strategy: SelectionStrategy = SelectionStrategy.BALANCED,
+        preferred_category: ToolCategory | None = None,
     ) -> ToolExecutionPlan:
-        candidates = await self.index.search(task.description, top_k=5)
+        candidates = await self.index.search(
+            task.description,
+            top_k=5,
+            filter_category=preferred_category,
+        )
+        if not candidates and preferred_category is not None:
+            candidates = await self.index.search(task.description, top_k=5)
         ranked = self._rank_by_strategy(candidates, strategy)
         if not ranked:
             raise NoSuitableToolError(f"no suitable tool for: {task.description}")

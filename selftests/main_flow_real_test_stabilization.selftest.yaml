@@ -1,0 +1,9 @@
+feature_id: F-MAIN-FLOW-REAL-TEST-STAB
+feature_title: "Real Test Stabilization Pack"
+progress: 82
+self_test:
+  command: "python -m unittest -v tests.test_domain_router tests.test_tool_planning tests.test_api_launch_flow tests.test_main_flow_tool_plan_integration"
+  executed_at: "2026-03-30 17:05:20"
+  result: "pass"
+  report_path: "output/ci_evidence/real_test_stabilization_unittest.log"
+  notes: "验证领域路由误判修复、工具主选类别收敛、交付校验元数据告警消除。"
