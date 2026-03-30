@@ -1,9 +1,9 @@
 feature_id: F-CORE-MAIN-FLOW
 feature_title: "Formal main workflow scaffold"
-progress: 35
+progress: 45
 self_test:
-  command: "python -m compileall agent_factory"
-  executed_at: "2026-03-30 14:00:00"
+  command: "python -m unittest -v tests.test_main_flow_tool_plan_integration"
+  executed_at: "2026-03-30 16:20:00"
   result: "pass"
-  report_path: "local://compileall"
-  notes: "Package import and syntax compile check completed for scaffold modules."
+  report_path: "local://unittest-main-flow-tool-plan-integration"
+  notes: "Main flow nodes integration verified in FAST mode: route->tool_plan->dispatch_phase2->development."
