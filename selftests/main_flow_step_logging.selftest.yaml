@@ -1,0 +1,9 @@
+feature_id: F-MAIN-FLOW-STEP-LOGGING
+feature_title: "Step-by-Step Chinese Detailed Logging"
+progress: 85
+self_test:
+  command: "python -m unittest -v tests.test_api_launch_flow tests.test_tool_planning tests.test_main_flow_tool_plan_integration"
+  executed_at: "2026-03-30 16:43:15"
+  result: "pass"
+  report_path: "output/ci_evidence/step_logging_unittest.log"
+  notes: "节点开始/完成、关键路由分支和 API 入口均输出简体中文详细日志，测试日志可完整回放执行步骤。"

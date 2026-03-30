@@ -54,15 +54,18 @@ class LocalFactoryWorkflow:
     """
 
     async def ainvoke(self, state: FactoryStateV3) -> FactoryStateV3:
+        LOGGER.info("【工作流日志】本地工作流开始 | session_id=%s", state.get("session_id"))
         current = await intake_node(state)
         current = await domain_router_node(current)
         current = await cost_estimate_node(current)
         current = await dispatch_phase1_node(current)
 
         if route_post_dispatch_phase1(current) == "discussion":
+            LOGGER.info("【工作流日志】进入 discussion 分支 | session_id=%s", current.get("session_id"))
             current = await discussion_node(current)
             current = await tool_plan_node(current)
         else:
+            LOGGER.info("【工作流日志】进入 fast/tool_plan 分支 | session_id=%s", current.get("session_id"))
             current = await tool_plan_node(current)
 
         current = await dispatch_phase2_node(current)
@@ -70,21 +73,30 @@ class LocalFactoryWorkflow:
         current = await quality_gate_node(current)
 
         while route_quality_gate(current) == "failure_classifier":
+            LOGGER.warning("【工作流日志】质量门禁失败，进入恢复链路 | session_id=%s", current.get("session_id"))
             current = await failure_classifier_node(current)
             current = await recovery_strategy_node(current)
             next_step = route_recovery_strategy(current)
             if next_step == "targeted_remediation":
+                LOGGER.warning("【工作流日志】执行 targeted_remediation | session_id=%s", current.get("session_id"))
                 current = await targeted_remediation_node(current)
                 current = await quality_gate_node(current)
                 continue
             if next_step == "graceful_packager":
+                LOGGER.warning("【工作流日志】执行 graceful_packager | session_id=%s", current.get("session_id"))
                 current = await graceful_packager_node(current)
                 break
             if next_step == "human_recovery":
+                LOGGER.warning("【工作流日志】执行 human_recovery | session_id=%s", current.get("session_id"))
                 current = await human_recovery_node(current)
                 human_next = route_human_recovery(current)
                 if human_next == END:
                     current["status"] = "aborted_by_human"
+                    LOGGER.warning(
+                        "【工作流日志】人工中止流程 | session_id=%s | status=%s",
+                        current.get("session_id"),
+                        current.get("status"),
+                    )
                     return current
                 if human_next == "graceful_packager":
                     current = await graceful_packager_node(current)
@@ -96,6 +108,11 @@ class LocalFactoryWorkflow:
         if current.get("status") not in {"graceful_packaged", "aborted_by_human"}:
             current = await packaging_node(current)
         current = await delivery_node(current)
+        LOGGER.info(
+            "【工作流日志】本地工作流结束 | session_id=%s | final_status=%s",
+            current.get("session_id"),
+            current.get("status"),
+        )
         return current
 
 

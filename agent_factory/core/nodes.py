@@ -32,6 +32,23 @@ from agent_factory.testing.graph import run_quality_gate
 LOGGER = logging.getLogger(__name__)
 
 
+def _session_id(state: FactoryStateV3) -> str:
+    return str(state.get("session_id", "unknown"))
+
+
+def _log_step(
+    state: FactoryStateV3,
+    step: str,
+    phase: str,
+    detail: str = "",
+    level: int = logging.INFO,
+) -> None:
+    message = f"会话={_session_id(state)} | 步骤={step} | 阶段={phase}"
+    if detail:
+        message = f"{message} | 详情={detail}"
+    LOGGER.log(level, "【主流程日志】%s", message)
+
+
 def _slugify_name(value: str) -> str:
     cleaned = re.sub(r"[^a-zA-Z0-9\u4e00-\u9fff]+", "_", value.strip().lower())
     cleaned = re.sub(r"_+", "_", cleaned).strip("_")
@@ -107,50 +124,76 @@ def _get_recovery_journal() -> RecoveryJournal:
 
 
 async def intake_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "intake_node", "开始", detail="解析用户输入并生成 AgentSpec")
     user_input = state["user_input"]
     language = TargetLanguage.from_value(state.get("target_language"))
+    tools = _detect_tools(user_input)
     spec = AgentSpec(
         name=_extract_name(user_input),
         purpose=[line.strip(" -") for line in user_input.splitlines() if line.strip()][:3]
         or [user_input.strip()],
-        tools=_detect_tools(user_input),
+        tools=tools,
         target_user="general",
-        dependencies=_default_dependencies(language, _detect_tools(user_input)),
+        dependencies=_default_dependencies(language, tools),
         target_language=language,
     )
     state["target_language"] = language.value
     state["agent_spec"] = spec
     state["status"] = "intake_done"
+    _log_step(
+        state,
+        "intake_node",
+        "完成",
+        detail=f"agent={spec.name}, language={language.value}, tools={','.join(spec.tools)}",
+    )
     return state
 
 
 async def domain_router_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "domain_router_node", "开始", detail="执行领域识别与部门路由")
     spec = state.get("agent_spec")
     if not spec:
+        _log_step(state, "domain_router_node", "失败", detail="缺少 agent_spec", level=logging.ERROR)
         raise ValueError("agent_spec is required before domain routing")
     router = _get_router()
     divisions = router.route(spec)
     state["domain"] = router.detect_domain(spec)
     state["relevant_divisions"] = [d.value for d in sorted(divisions, key=lambda x: x.value)]
     state["status"] = "domain_routed"
+    _log_step(
+        state,
+        "domain_router_node",
+        "完成",
+        detail=f"domain={state['domain']}, divisions={','.join(state['relevant_divisions'])}",
+    )
     return state
 
 
 async def cost_estimate_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "cost_estimate_node", "开始", detail="估算 token/时长/成本")
     spec = state.get("agent_spec")
     if not spec:
+        _log_step(state, "cost_estimate_node", "失败", detail="缺少 agent_spec", level=logging.ERROR)
         raise ValueError("agent_spec is required before cost estimate")
     mode = state.get("execution_mode", ExecutionMode.STANDARD)
     estimator = CostEstimator()
     estimate = estimator.estimate(spec=spec, mode=mode)
     state["cost_estimate"] = estimate
     state["status"] = "cost_estimated"
+    _log_step(
+        state,
+        "cost_estimate_node",
+        "完成",
+        detail=f"mode={mode.value}, tokens={estimate.estimated_tokens}, usd={estimate.estimated_usd}",
+    )
     return state
 
 
 async def dispatch_phase1_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "dispatch_phase1_node", "开始", detail="选择讨论阶段角色")
     spec = state.get("agent_spec")
     if not spec:
+        _log_step(state, "dispatch_phase1_node", "失败", detail="缺少 agent_spec", level=logging.ERROR)
         raise ValueError("agent_spec is required before phase1 dispatch")
     dispatcher = _get_dispatcher()
     mode = state.get("execution_mode", ExecutionMode.STANDARD)
@@ -161,14 +204,28 @@ async def dispatch_phase1_node(state: FactoryStateV3) -> FactoryStateV3:
     )
     state["dispatch_plan_phase1"] = plan
     state["status"] = "phase1_dispatched"
+    _log_step(
+        state,
+        "dispatch_phase1_node",
+        "完成",
+        detail=f"roles={','.join(plan.roles)}, rounds={plan.discussion_rounds}",
+    )
     return state
 
 
 async def discussion_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "discussion_node", "开始", detail="进入并行讨论，生成技术规格")
     spec = state.get("agent_spec")
     plan = state.get("dispatch_plan_phase1")
     mode = state.get("execution_mode", ExecutionMode.STANDARD)
     if not spec or not plan:
+        _log_step(
+            state,
+            "discussion_node",
+            "失败",
+            detail="缺少 agent_spec 或 dispatch_plan_phase1",
+            level=logging.ERROR,
+        )
         raise ValueError("discussion requires agent_spec and dispatch_plan_phase1")
     result = await run_parallel_discussion(
         spec=spec,
@@ -181,24 +238,40 @@ async def discussion_node(state: FactoryStateV3) -> FactoryStateV3:
     state["token_usage"]["discussion"] = result.estimated_tokens
     state["token_usage"]["total"] = sum(state["token_usage"].values())
     state["status"] = "discussion_done"
+    _log_step(
+        state,
+        "discussion_node",
+        "完成",
+        detail=f"tokens={result.estimated_tokens}, disagreements={len(result.disagreements)}",
+    )
     return state
 
 
 async def tool_plan_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "tool_plan_node", "开始", detail="生成工具执行计划和回退链")
     spec = state.get("agent_spec")
     if not spec:
+        _log_step(state, "tool_plan_node", "失败", detail="缺少 agent_spec", level=logging.ERROR)
         raise ValueError("tool planning requires agent_spec")
     chains = await build_tool_chains_for_spec(spec)
     state["tool_plans"] = [asdict(chain) for chain in chains]
     if state.get("tech_spec"):
         state["tech_spec"].tools_needed = [chain.task_type for chain in chains]
     state["status"] = "tool_plan_ready"
+    _log_step(
+        state,
+        "tool_plan_node",
+        "完成",
+        detail=f"plans={len(chains)}, tasks={','.join(c.task_type for c in chains) or 'none'}",
+    )
     return state
 
 
 async def dispatch_phase2_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "dispatch_phase2_node", "开始", detail="选择开发阶段角色并补齐 TechSpec")
     spec = state.get("agent_spec")
     if not spec:
+        _log_step(state, "dispatch_phase2_node", "失败", detail="缺少 agent_spec", level=logging.ERROR)
         raise ValueError("agent_spec is required before phase2 dispatch")
     if not state.get("tech_spec"):
         state["tech_spec"] = TechSpec(
@@ -235,14 +308,28 @@ async def dispatch_phase2_node(state: FactoryStateV3) -> FactoryStateV3:
     )
     state["dispatch_plan_phase2"] = plan
     state["status"] = "phase2_dispatched"
+    _log_step(
+        state,
+        "dispatch_phase2_node",
+        "完成",
+        detail=f"roles={','.join(plan.roles)}, task_count={len(state['tech_spec'].task_breakdown)}",
+    )
     return state
 
 
 async def development_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "development_node", "开始", detail="生成代码与文档产物")
     spec = state.get("agent_spec")
     tech_spec = state.get("tech_spec")
     plan = state.get("dispatch_plan_phase2")
     if not spec or not tech_spec or not plan:
+        _log_step(
+            state,
+            "development_node",
+            "失败",
+            detail="缺少 spec/tech_spec/dispatch_plan_phase2",
+            level=logging.ERROR,
+        )
         raise ValueError("development requires spec, tech_spec and phase2 plan")
     artifacts = await run_development_graph(
         spec=spec,
@@ -254,13 +341,27 @@ async def development_node(state: FactoryStateV3) -> FactoryStateV3:
     state["token_usage"]["development"] = 22_000 + len(plan.roles) * 1_200 + len(state.get("tool_plans", [])) * 600
     state["token_usage"]["total"] = sum(state["token_usage"].values())
     state["status"] = "development_done"
+    _log_step(
+        state,
+        "development_node",
+        "完成",
+        detail=f"entry={artifacts.entry_file}, files={len(artifacts.files)}, tokens={state['token_usage']['development']}",
+    )
     return state
 
 
 async def quality_gate_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "quality_gate_node", "开始", detail="执行质量门禁检查")
     spec = state.get("agent_spec")
     artifacts = state.get("development_artifacts")
     if not spec or not artifacts:
+        _log_step(
+            state,
+            "quality_gate_node",
+            "失败",
+            detail="缺少 agent_spec 或 development_artifacts",
+            level=logging.ERROR,
+        )
         raise ValueError("quality gate requires agent_spec and development_artifacts")
     report = await run_quality_gate(spec=spec, artifacts=artifacts)
     state["test_report"] = report
@@ -270,10 +371,25 @@ async def quality_gate_node(state: FactoryStateV3) -> FactoryStateV3:
     if not report.passed:
         state["last_error"] = "; ".join(report.failures) or "quality gate failed"
         state["failed_node"] = "quality_gate"
+        _log_step(
+            state,
+            "quality_gate_node",
+            "失败",
+            detail=f"coverage={report.coverage}, failures={'; '.join(report.failures[:3])}",
+            level=logging.WARNING,
+        )
+    else:
+        _log_step(
+            state,
+            "quality_gate_node",
+            "完成",
+            detail=f"coverage={report.coverage}, checks={len(report.checks)}",
+        )
     return state
 
 
 async def failure_classifier_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "failure_classifier_node", "开始", detail="分类失败原因")
     classifier = _get_failure_classifier()
     raw_error = state.get("last_error") or "unknown pipeline error"
     failure = await classifier.classify(
@@ -286,12 +402,21 @@ async def failure_classifier_node(state: FactoryStateV3) -> FactoryStateV3:
     )
     state["failure"] = failure
     state["status"] = "failure_classified"
+    _log_step(
+        state,
+        "failure_classifier_node",
+        "完成",
+        detail=f"error={raw_error[:120]}",
+        level=logging.WARNING,
+    )
     return state
 
 
 async def recovery_strategy_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "recovery_strategy_node", "开始", detail="选择恢复策略")
     failure = state.get("failure")
     if not failure:
+        _log_step(state, "recovery_strategy_node", "失败", detail="缺少 failure", level=logging.ERROR)
         raise ValueError("failure is required before recovery strategy")
     retries = state.get("retry_count", 0) + 1
     strategy_engine = _get_recovery_engine()
@@ -312,12 +437,21 @@ async def recovery_strategy_node(state: FactoryStateV3) -> FactoryStateV3:
         outcome="selected",
         duration_seconds=0.0,
     )
+    _log_step(
+        state,
+        "recovery_strategy_node",
+        "完成",
+        detail=f"attempt={retries}, action={result.action}",
+        level=logging.WARNING,
+    )
     return state
 
 
 async def targeted_remediation_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "targeted_remediation_node", "开始", detail="应用定向修复策略")
     result = state.get("recovery_result")
     if not result:
+        _log_step(state, "targeted_remediation_node", "失败", detail="缺少 recovery_result", level=logging.ERROR)
         raise ValueError("recovery_result required for remediation")
     plan = state.get("dispatch_plan_phase2")
     if plan and result.substitute_role_slug:
@@ -326,18 +460,34 @@ async def targeted_remediation_node(state: FactoryStateV3) -> FactoryStateV3:
     if state.get("tech_spec"):
         state["tech_spec"].risk_register.append(result.remediation_instruction)
     state["status"] = "remediation_applied"
+    _log_step(
+        state,
+        "targeted_remediation_node",
+        "完成",
+        detail=f"instruction={result.remediation_instruction[:120]}",
+        level=logging.WARNING,
+    )
     return state
 
 
 async def human_recovery_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "human_recovery_node", "开始", detail="等待人工恢复决策")
     decision = (state.get("human_decision") or "").strip().lower()
     if decision not in {"retry", "degrade", "abort"}:
         state["human_decision"] = "degrade"
     state["status"] = "await_human_recovery_decision"
+    _log_step(
+        state,
+        "human_recovery_node",
+        "完成",
+        detail=f"decision={state.get('human_decision')}",
+        level=logging.WARNING,
+    )
     return state
 
 
 async def graceful_packager_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "graceful_packager_node", "开始", detail="执行降级打包路径")
     if not state.get("tech_spec"):
         state["tech_spec"] = TechSpec(
             architecture="degraded-single-module",
@@ -352,19 +502,35 @@ async def graceful_packager_node(state: FactoryStateV3) -> FactoryStateV3:
     packaged = await package_delivery(state=state, degraded=True)
     state["delivery_package"] = packaged
     state["status"] = "graceful_packaged"
+    _log_step(
+        state,
+        "graceful_packager_node",
+        "完成",
+        detail=f"output={packaged.output_dir}, passed={packaged.validation_passed}",
+        level=logging.WARNING,
+    )
     return state
 
 
 async def packaging_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "packaging_node", "开始", detail="执行标准打包与验证")
     packaged = await package_delivery(state=state, degraded=False)
     state["delivery_package"] = packaged
     state["status"] = "packaged"
+    _log_step(
+        state,
+        "packaging_node",
+        "完成",
+        detail=f"output={packaged.output_dir}, passed={packaged.validation_passed}",
+    )
     return state
 
 
 async def delivery_node(state: FactoryStateV3) -> FactoryStateV3:
+    _log_step(state, "delivery_node", "开始", detail="写入交付状态并记录反馈")
     package = state.get("delivery_package")
     if not package:
+        _log_step(state, "delivery_node", "失败", detail="缺少 delivery_package", level=logging.ERROR)
         raise ValueError("delivery_package missing before delivery")
     state["status"] = "delivered" if package.validation_passed else "blocked"
 
@@ -373,22 +539,39 @@ async def delivery_node(state: FactoryStateV3) -> FactoryStateV3:
         await _get_dispatcher().record_outcome(outcome)
     else:
         state.setdefault("block_reasons", []).append("delivery_validation_failed")
+    _log_step(
+        state,
+        "delivery_node",
+        "完成",
+        detail=f"status={state['status']}, validation_passed={package.validation_passed}",
+        level=logging.INFO if package.validation_passed else logging.WARNING,
+    )
     return state
 
 
 def route_post_dispatch_phase1(state: FactoryStateV3) -> str:
     mode = state.get("execution_mode", ExecutionMode.STANDARD)
-    return "tool_plan" if mode == ExecutionMode.FAST else "discussion"
+    next_step = "tool_plan" if mode == ExecutionMode.FAST else "discussion"
+    _log_step(state, "route_post_dispatch_phase1", "路由", detail=f"mode={mode.value} -> {next_step}")
+    return next_step
 
 
 def route_quality_gate(state: FactoryStateV3) -> str:
     report = state.get("test_report")
-    return "packaging" if report and report.passed else "failure_classifier"
+    next_step = "packaging" if report and report.passed else "failure_classifier"
+    _log_step(
+        state,
+        "route_quality_gate",
+        "路由",
+        detail=f"report_passed={bool(report and report.passed)} -> {next_step}",
+    )
+    return next_step
 
 
 def route_recovery_strategy(state: FactoryStateV3) -> str:
     result = state.get("recovery_result")
     if not result:
+        _log_step(state, "route_recovery_strategy", "路由", detail="无 recovery_result -> human_recovery")
         return "human_recovery"
     if result.action in {
         RecoveryStrategy.RETRY_IMMEDIATE,
@@ -401,6 +584,7 @@ def route_recovery_strategy(state: FactoryStateV3) -> str:
         failed = state.get("failed_node") or "development"
         if failed not in {"discussion", "development", "quality_gate", "packaging"}:
             failed = "development"
+        _log_step(state, "route_recovery_strategy", "路由", detail=f"action={result.action} -> {failed}")
         return failed
     mapping = {
         RecoveryStrategy.SUBSTITUTE_ROLE: "targeted_remediation",
@@ -408,14 +592,20 @@ def route_recovery_strategy(state: FactoryStateV3) -> str:
         RecoveryStrategy.GRACEFUL_DEGRADE: "graceful_packager",
         RecoveryStrategy.ESCALATE_TO_HUMAN: "human_recovery",
     }
-    return mapping.get(result.action, "human_recovery")
+    next_step = mapping.get(result.action, "human_recovery")
+    _log_step(state, "route_recovery_strategy", "路由", detail=f"action={result.action} -> {next_step}")
+    return next_step
 
 
 def route_human_recovery(state: FactoryStateV3) -> str:
     decision = (state.get("human_decision") or "").strip().lower()
     if decision == "retry":
         failed = state.get("failed_node") or "development"
-        return failed if failed in {"discussion", "development", "quality_gate", "packaging"} else "development"
+        next_step = failed if failed in {"discussion", "development", "quality_gate", "packaging"} else "development"
+        _log_step(state, "route_human_recovery", "路由", detail=f"decision=retry -> {next_step}")
+        return next_step
     if decision == "degrade":
+        _log_step(state, "route_human_recovery", "路由", detail="decision=degrade -> graceful_packager")
         return "graceful_packager"
+    _log_step(state, "route_human_recovery", "路由", detail="decision=abort -> __end__", level=logging.WARNING)
     return "__end__"
