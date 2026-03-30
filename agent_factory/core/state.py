@@ -137,6 +137,7 @@ class FactoryStateV3(TypedDict, total=False):
     cost_estimate: Optional[CostEstimate]
     dispatch_plan_phase1: Optional[DispatchPlan]
     tech_spec: Optional[TechSpec]
+    tool_plans: list[dict[str, Any]]
     dispatch_plan_phase2: Optional[DispatchPlan]
     development_artifacts: Optional[DevelopmentArtifacts]
     test_report: Optional[TestReport]
@@ -169,6 +170,7 @@ def create_initial_state(
         cost_estimate=None,
         dispatch_plan_phase1=None,
         tech_spec=None,
+        tool_plans=[],
         dispatch_plan_phase2=None,
         development_artifacts=None,
         test_report=None,

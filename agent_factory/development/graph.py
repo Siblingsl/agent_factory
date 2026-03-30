@@ -22,6 +22,7 @@ async def run_development_graph(
     spec: AgentSpec,
     tech_spec: TechSpec,
     role_slugs: list[str],
+    tool_plans: list[dict[str, object]] | None = None,
 ) -> DevelopmentArtifacts:
     router = DevTaskRouter()
     task_roles = router.route(tech_spec)
@@ -37,7 +38,13 @@ async def run_development_graph(
         files[node_runtime[0]] = node_runtime[1]
     files.update(build_config_files(spec, tech_spec))
     files.update(build_tests(spec))
-    files["docs/ARCHITECTURE.md"] = _architecture_doc(spec, tech_spec, tasks, role_slugs)
+    files["docs/ARCHITECTURE.md"] = _architecture_doc(
+        spec,
+        tech_spec,
+        tasks,
+        role_slugs,
+        tool_plans=tool_plans or [],
+    )
     files["docs/API.md"] = _api_doc(spec, entry_file)
 
     return DevelopmentArtifacts(
@@ -48,14 +55,27 @@ async def run_development_graph(
             "task_count": len(tasks),
             "assigned_roles": role_slugs,
             "task_owners": {t.description: t.owners for t in tasks},
+            "tool_plans": tool_plans or [],
         },
     )
 
 
 def _architecture_doc(
-    spec: AgentSpec, tech_spec: TechSpec, tasks: list[DevelopmentTask], role_slugs: list[str]
+    spec: AgentSpec,
+    tech_spec: TechSpec,
+    tasks: list[DevelopmentTask],
+    role_slugs: list[str],
+    tool_plans: list[dict[str, object]],
 ) -> str:
     task_lines = "\n".join(f"- {t.description} :: {', '.join(t.owners)}" for t in tasks)
+    tool_lines = "\n".join(
+        (
+            f"- {str(item.get('task_type', 'general'))}: "
+            f"primary={str(item.get('primary_tool_id', 'n/a'))}, "
+            f"fallback={','.join(str(v) for v in item.get('fallback_tool_ids', [])) or 'none'}"
+        )
+        for item in tool_plans
+    ) or "- none"
     return f"""# Architecture
 
 Agent: `{spec.name}`
@@ -67,6 +87,9 @@ Execution Model: layered workflow
 
 ## Task Routing
 {task_lines}
+
+## Tool Plan
+{tool_lines}
 
 ## Assigned Roles
 {chr(10).join(f"- {r}" for r in role_slugs)}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from dataclasses import asdict
 from pathlib import Path
 import logging
 import re
@@ -20,6 +21,7 @@ from agent_factory.development.graph import run_development_graph
 from agent_factory.discussion.parallel_graph import run_parallel_discussion
 from agent_factory.dispatcher.feedback_store import DispatchOutcome
 from agent_factory.dispatcher.master_dispatcher import MasterDispatcher
+from agent_factory.engine.tool_planning import build_tool_chains_for_spec
 from agent_factory.recovery.failure_classifier import FailureClassifier
 from agent_factory.recovery.strategy_engine import RecoveryStrategy, RecoveryStrategyEngine
 from agent_factory.recovery.recovery_journal import RecoveryJournal
@@ -182,6 +184,18 @@ async def discussion_node(state: FactoryStateV3) -> FactoryStateV3:
     return state
 
 
+async def tool_plan_node(state: FactoryStateV3) -> FactoryStateV3:
+    spec = state.get("agent_spec")
+    if not spec:
+        raise ValueError("tool planning requires agent_spec")
+    chains = await build_tool_chains_for_spec(spec)
+    state["tool_plans"] = [asdict(chain) for chain in chains]
+    if state.get("tech_spec"):
+        state["tech_spec"].tools_needed = [chain.task_type for chain in chains]
+    state["status"] = "tool_plan_ready"
+    return state
+
+
 async def dispatch_phase2_node(state: FactoryStateV3) -> FactoryStateV3:
     spec = state.get("agent_spec")
     if not spec:
@@ -199,6 +213,20 @@ async def dispatch_phase2_node(state: FactoryStateV3) -> FactoryStateV3:
             dependencies=spec.dependencies,
             tools_needed=[t for t in spec.tools if t != "none"],
         )
+    plans = state.get("tool_plans") or []
+    if state.get("tech_spec") and plans:
+        state["tech_spec"].tools_needed = [str(p.get("task_type", "")).strip() for p in plans if p.get("task_type")]
+        plan_steps = [
+            (
+                f"Integrate tool chain for {p.get('task_type')}: "
+                f"primary={p.get('primary_tool_id')} fallback={','.join(p.get('fallback_tool_ids', [])) or 'none'}"
+            )
+            for p in plans
+        ]
+        existing = set(state["tech_spec"].task_breakdown)
+        for step in plan_steps:
+            if step not in existing:
+                state["tech_spec"].task_breakdown.append(step)
     dispatcher = _get_dispatcher()
     plan = await dispatcher.dispatch_phase2(
         spec=spec,
@@ -220,9 +248,10 @@ async def development_node(state: FactoryStateV3) -> FactoryStateV3:
         spec=spec,
         tech_spec=tech_spec,
         role_slugs=plan.roles,
+        tool_plans=state.get("tool_plans", []),
     )
     state["development_artifacts"] = artifacts
-    state["token_usage"]["development"] = 22_000 + len(plan.roles) * 1_200
+    state["token_usage"]["development"] = 22_000 + len(plan.roles) * 1_200 + len(state.get("tool_plans", [])) * 600
     state["token_usage"]["total"] = sum(state["token_usage"].values())
     state["status"] = "development_done"
     return state
@@ -349,7 +378,7 @@ async def delivery_node(state: FactoryStateV3) -> FactoryStateV3:
 
 def route_post_dispatch_phase1(state: FactoryStateV3) -> str:
     mode = state.get("execution_mode", ExecutionMode.STANDARD)
-    return "dispatch_phase2" if mode == ExecutionMode.FAST else "discussion"
+    return "tool_plan" if mode == ExecutionMode.FAST else "discussion"
 
 
 def route_quality_gate(state: FactoryStateV3) -> str:

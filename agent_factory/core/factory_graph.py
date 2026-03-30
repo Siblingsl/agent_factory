@@ -25,6 +25,7 @@ from agent_factory.core.nodes import (
     route_post_dispatch_phase1,
     route_quality_gate,
     route_recovery_strategy,
+    tool_plan_node,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -60,6 +61,9 @@ class LocalFactoryWorkflow:
 
         if route_post_dispatch_phase1(current) == "discussion":
             current = await discussion_node(current)
+            current = await tool_plan_node(current)
+        else:
+            current = await tool_plan_node(current)
 
         current = await dispatch_phase2_node(current)
         current = await development_node(current)
@@ -114,6 +118,7 @@ def build_factory_graph_v3(
     graph.add_node("cost_estimate", cost_estimate_node)
     graph.add_node("dispatch_phase1", dispatch_phase1_node)
     graph.add_node("discussion", discussion_node)
+    graph.add_node("tool_plan", tool_plan_node)
     graph.add_node("dispatch_phase2", dispatch_phase2_node)
     graph.add_node("development", development_node)
     graph.add_node("quality_gate", quality_gate_node)
@@ -132,7 +137,8 @@ def build_factory_graph_v3(
     graph.add_edge("cost_estimate", "dispatch_phase1")
 
     graph.add_conditional_edges("dispatch_phase1", route_post_dispatch_phase1)
-    graph.add_edge("discussion", "dispatch_phase2")
+    graph.add_edge("discussion", "tool_plan")
+    graph.add_edge("tool_plan", "dispatch_phase2")
     graph.add_edge("dispatch_phase2", "development")
     graph.add_edge("development", "quality_gate")
 

@@ -93,6 +93,7 @@ async def package_delivery(state: FactoryStateV3, degraded: bool) -> DeliveryPac
         else 0,
         "token_usage": state.get("token_usage", {}),
         "quality_gate_attempts": state.get("retry_count", 0) + 1,
+        "tool_plans": state.get("tool_plans", []),
         "degraded": degraded,
     }
     (output_dir / "factory_metadata.json").write_text(

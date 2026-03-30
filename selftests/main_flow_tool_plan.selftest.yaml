@@ -1,0 +1,9 @@
+feature_id: F-MAIN-FLOW-TOOL-PLAN
+feature_title: "Tool Planning Integration"
+progress: 20
+self_test:
+  command: "python -m compileall agent_factory/core agent_factory/development agent_factory/delivery agent_factory/engine"
+  executed_at: "2026-03-30 16:00:00"
+  result: "pass"
+  report_path: "local://compileall-tool-planning"
+  notes: "Tool planning node integrated into main workflow and validated by compileall."
