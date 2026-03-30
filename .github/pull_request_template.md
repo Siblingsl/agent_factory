@@ -16,6 +16,8 @@ Select one:
 - `updated` - docs were updated in this PR
 - `blocked` - docs update is blocked and release should be blocked
 
+Doc Impact: updated
+
 ## Risks
 
 - Main risk

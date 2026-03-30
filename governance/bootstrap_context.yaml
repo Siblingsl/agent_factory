@@ -1,5 +1,9 @@
-repo_mode: local
-bootstrap_stage: ci_gate_bootstrap_completed
+repo_mode: remote
+bootstrap_stage: ci_gate_bootstrap_pending_validation
+project_status: bootstrap_blocked
+next_action: finish_ci_gate_bootstrap
 notes: >
-  Local workspace mode does not have remote branch protection settings.
-  Branch-protection checks are treated as N/A in local mode and must be re-validated in remote mode.
+  Remote repository mode is enabled. Branch protection must remain enforced on main.
+remote_enforcement:
+  pr_doc_drift_gate: enabled_in_ci
+  branch_protection_guard: enabled_in_ci

@@ -3,8 +3,6 @@ name: ci-gate
 on:
   pull_request:
   push:
-    branches:
-      - main
 
 jobs:
   gate:
@@ -12,6 +10,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -26,3 +26,21 @@ jobs:
       - name: Run Gate
         run: |
           python -m agent_factory.ci.run_gates --strict
+
+      - name: PR Doc Drift Gate
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m agent_factory.ci.pr_doc_impact_gate --strict
+
+      - name: Branch Protection Guard
+        if: github.event_name == 'pull_request'
+        env:
+          BRANCH_ADMIN_TOKEN: ${{ secrets.BRANCH_ADMIN_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python -m agent_factory.ci.branch_protection_guard --mode check --branch main --check-name gate --reviewers 1 --strict

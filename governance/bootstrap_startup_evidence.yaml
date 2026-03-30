@@ -1,0 +1,14 @@
+repo: Siblingsl/agent_factory
+branch: main
+first_test_pr_triggers_ci_gate: false
+intentional_violation_blocked_by_gate: false
+violation_fix_recovers_gate_to_pass: false
+branch_protection_non_bypassable: true
+project_status: bootstrap_blocked
+next_action: finish_ci_gate_bootstrap
+evidence:
+  first_test_pr_url: ''
+  violation_block_pr_url: ''
+  violation_fix_pr_url: ''
+  notes: 'branch_protection: branch protection policy satisfied'
+updated_at: '2026-03-30T06:44:24Z'

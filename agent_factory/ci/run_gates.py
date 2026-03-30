@@ -72,9 +72,13 @@ def check_required_bootstrap_files(repo_path: Path) -> GateCheckResult:
         ".github/workflows/ci-gate.yml",
         ".github/pull_request_template.md",
         "agent_factory/ci/run_gates.py",
+        "agent_factory/ci/pr_doc_impact_gate.py",
+        "agent_factory/ci/branch_protection_guard.py",
+        "agent_factory/ci/bootstrap_startup_guard.py",
         "docs/FEATURE_PROGRESS.md",
         "governance/doc_code_map.yaml",
         "governance/bootstrap_context.yaml",
+        "governance/bootstrap_startup_evidence.yaml",
     ]
     missing = [f for f in required if not (repo_path / f).exists()]
     return GateCheckResult(
@@ -298,6 +302,50 @@ def check_branch_protection_policy(repo_path: Path) -> GateCheckResult:
     )
 
 
+def check_bootstrap_startup_criteria(repo_path: Path) -> GateCheckResult:
+    """
+    Enforce document section 0.10.6:
+    project can start development only when all bootstrap proof flags are true.
+    """
+    evidence_path = repo_path / "governance" / "bootstrap_startup_evidence.yaml"
+    if not evidence_path.exists():
+        return GateCheckResult(
+            name="bootstrap_startup_check",
+            passed=False,
+            message="bootstrap startup evidence missing",
+        )
+
+    payload = yaml.safe_load(evidence_path.read_text(encoding="utf-8", errors="ignore")) or {}
+    required_flags = [
+        "first_test_pr_triggers_ci_gate",
+        "intentional_violation_blocked_by_gate",
+        "violation_fix_recovers_gate_to_pass",
+        "branch_protection_non_bypassable",
+    ]
+    missing_flags = [f for f in required_flags if payload.get(f) is not True]
+
+    status = str(payload.get("project_status", "")).strip()
+    expected_status = "bootstrap_ready" if not missing_flags else "bootstrap_blocked"
+    status_ok = status == expected_status
+
+    errors: list[str] = []
+    if missing_flags:
+        errors.append(f"missing true flags: {missing_flags}")
+    if not status_ok:
+        errors.append(f"project_status must be '{expected_status}'")
+
+    return GateCheckResult(
+        name="bootstrap_startup_check",
+        passed=not errors,
+        message="bootstrap startup criteria satisfied" if not errors else "; ".join(errors),
+        details={
+            "missing_flags": missing_flags,
+            "project_status": status,
+            "expected_status": expected_status,
+        },
+    )
+
+
 async def run_release_validation(repo_path: Path) -> GateCheckResult:
     try:
         from agent_factory.core.factory_graph import build_factory_graph_v3
@@ -443,6 +491,7 @@ def run_checks(repo_path: Path) -> tuple[list[GateCheckResult], dict[str, bool]]
         check_doc_code_consistency(repo_path),
         check_drift_exception_ttl(repo_path),
         check_branch_protection_policy(repo_path),
+        check_bootstrap_startup_criteria(repo_path),
     ]
     release_bundle_check = asyncio.run(run_release_validation(repo_path))
     checks.append(release_bundle_check)

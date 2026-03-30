@@ -13,6 +13,8 @@ mappings:
       - agent_factory/ci/run_gates.py
       - .github/workflows/ci-gate.yml
       - .github/pull_request_template.md
+      - agent_factory/ci/bootstrap_startup_guard.py
+      - governance/bootstrap_startup_evidence.yaml
       - agent_factory/core/factory_graph.py
       - agent_factory/recovery/strategy_engine.py
       - agent_factory/delivery/packager.py
